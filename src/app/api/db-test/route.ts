@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
+// 导出配置，禁用静态生成
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   // 创建一个隔离的 Prisma 客户端实例
   const prisma = new PrismaClient({

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "PRISMA_CLIENT_ENGINE_TYPE=binary npx prisma generate && next build",
+  "buildCommand": "PRISMA_CLIENT_ENGINE_TYPE=binary npx prisma generate && NEXT_PUBLIC_VERCEL_ENV=production next build",
   "installCommand": "npm install supports-color",
   "framework": "nextjs",
   "outputDirectory": ".next",
@@ -9,6 +9,8 @@
     "DIRECT_URL": "postgresql://postgres.oyldabuxfzntyzcmqwwq:l1efeU2rbVPv9o1B@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=no-verify",
     "DATABASE_URL": "postgresql://postgres.oyldabuxfzntyzcmqwwq:l1efeU2rbVPv9o1B@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=no-verify",
     "NEXTAUTH_SECRET": "e5ec1025f0729eee6ac5c36a8851a01e0dc9373584b9d9086227c89e66718994",
-    "NEXTAUTH_URL": "https://igd-mu.vercel.app"
+    "NEXTAUTH_URL": "https://igd-mu.vercel.app",
+    "NODE_ENV": "production",
+    "VERCEL_ENV": "production"
   }
 } 

@@ -14,9 +14,19 @@ const nextConfig = {
     // 忽略构建时的TypeScript错误
     ignoreBuildErrors: true,
   },
-  // 增加静态输出配置，避免构建时连接数据库
+  // 完全禁用静态页面生成，改为SSR
   output: 'standalone',
-  staticPageGenerationTimeout: 120,
+  staticPageGenerationTimeout: 240,
+  // 禁用静态生成，改为完全SSR
+  experimental: {
+    // 完全禁用静态生成
+    isrMemoryCacheSize: 0,
+    isrFlushToDisk: false,
+    workerThreads: false,
+    cpus: 1,
+  },
+  // 固定构建ID，避免生成静态文件时的冲突
+  generateBuildId: () => 'build',
   // 添加webpack配置，处理supports-color缺失问题
   webpack: (config, { isServer }) => {
     // 解决supports-color模块缺失问题

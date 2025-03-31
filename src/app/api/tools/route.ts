@@ -4,6 +4,10 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
 import getFavicon from 'get-website-favicon';
 
+// 导出配置，禁用静态生成
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // GET /api/tools - 获取工具列表
 export async function GET(request: Request) {
   try {
