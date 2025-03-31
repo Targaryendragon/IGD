@@ -13,54 +13,66 @@ export async function GET(request: Request) {
   try {
     console.log("GET /api/tools - 开始处理请求");
     
+    // 确保每次查询前重新连接，防止prepared statement错误
+    await prisma.$connect();
+    
     const { searchParams } = new URL(request.url);
     const difficulty = searchParams.get('difficulty');
-    const search = searchParams.get('search');
+    const category = searchParams.get('category');
+    const search = searchParams.get('search') || '';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const featured = searchParams.get('featured') === 'true';
+    
     const skip = (page - 1) * limit;
-
+    
     // 构建查询条件
-    const where: any = { 
-      // 如果有搜索关键词，搜索工具名称或描述
-      ...(search && {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-        ],
-      }),
-      // 如果有难度筛选
-      ...(difficulty && { difficulty }),
-    };
-
-    // 查询工具
+    const where: any = {};
+    
+    if (difficulty) {
+      where.difficulty = difficulty;
+    }
+    
+    if (category) {
+      where.category = category;
+    }
+    
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    
+    if (featured) {
+      where.featured = true;
+    }
+    
+    // 计算总数
+    const total = await prisma.tool.count({ where });
+    
+    // 获取工具列表
     const tools = await prisma.tool.findMany({
       where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
       include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
         tags: true,
         ratings: true,
         _count: {
           select: {
             ratings: true,
-            comments: true,
           },
         },
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip,
+      take: limit,
     });
-
-    // 获取总工具数量
-    const total = await prisma.tool.count({ where });
-
+    
+    // 断开连接防止连接积累
+    await prisma.$disconnect();
+    
     console.log(`GET /api/tools - 查询到 ${tools.length} 个工具`);
     return NextResponse.json({
       tools,
@@ -69,8 +81,16 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("GET /api/tools - 错误:", error);
+    
+    // 确保出错时也断开连接
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      console.error("断开连接时出错:", disconnectError);
+    }
+    
     return NextResponse.json(
-      { error: "获取工具列表失败", details: error.message },
+      { error: "获取工具列表失败", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
@@ -180,4 +200,5 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+} 
 } 

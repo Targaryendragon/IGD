@@ -12,36 +12,41 @@ export async function GET(request: Request) {
   try {
     console.log("GET /api/articles - 开始处理请求");
     
+    // 确保每次查询前重新连接，防止prepared statement错误
+    await prisma.$connect();
+    
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
-    const tag = searchParams.get('tag');
+    const search = searchParams.get('search') || '';
+    const tag = searchParams.get('tag') || '';
     
-    // 计算分页偏移
     const skip = (page - 1) * limit;
     
     // 构建查询条件
-    const where = tag
-      ? {
-          tags: {
-            some: {
-              name: tag,
-            },
-          },
-        }
-      : {};
+    const where: any = {};
     
-    // 获取文章总数（用于分页）
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    
+    if (tag) {
+      where.tags = {
+        some: {
+          name: tag,
+        },
+      };
+    }
+    
+    // 计算总数
     const total = await prisma.article.count({ where });
     
-    // 获取文章列表
+    // 获取文章
     const articles = await prisma.article.findMany({
       where,
-      skip,
-      take: limit,
-      orderBy: {
-        createdAt: 'desc',
-      },
       include: {
         author: {
           select: {
@@ -58,25 +63,42 @@ export async function GET(request: Request) {
           },
         },
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip,
+      take: limit,
     });
     
-    // 计算总页数
+    // 计算分页信息
     const totalPages = Math.ceil(total / limit);
     
     console.log(`GET /api/articles - 查询到 ${articles.length} 个文章`);
+    
+    // 断开连接防止连接积累
+    await prisma.$disconnect();
+    
     return NextResponse.json({
       articles,
       pagination: {
         total,
-        totalPages,
-        currentPage: page,
+        page,
         limit,
+        totalPages,
       },
       total,
       message: `成功获取 ${articles.length} 个文章`
     });
   } catch (error) {
     console.error("GET /api/articles - 错误:", error);
+    
+    // 确保出错时也断开连接
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      console.error("断开连接时出错:", disconnectError);
+    }
+    
     return NextResponse.json(
       { error: "获取文章列表失败", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
