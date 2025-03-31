@@ -14,6 +14,9 @@ const nextConfig = {
     // 忽略构建时的TypeScript错误
     ignoreBuildErrors: true,
   },
+  // 增加静态输出配置，避免构建时连接数据库
+  output: 'standalone',
+  staticPageGenerationTimeout: 120,
   images: {
     remotePatterns: [
       {
