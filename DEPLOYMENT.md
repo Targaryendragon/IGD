@@ -9,6 +9,7 @@
 - 端口：`6543`
 - 数据库：`postgres`
 - 用户：`postgres.oyldabuxfzntyzcmqwwq`
+- 额外参数：`sslmode=require`（Supabase 需要 SSL 连接）
 
 需要在 Vercel 环境变量中设置：
 - `DATABASE_URL`：完整的数据库连接字符串
@@ -17,7 +18,7 @@
 
 1. 登录 Vercel 账户并导入 GitHub 仓库
 2. 配置必要的环境变量：
-   - `DATABASE_URL`：数据库连接字符串
+   - `DATABASE_URL`：数据库连接字符串（确保包含 `sslmode=require` 参数）
    - `NEXTAUTH_SECRET`：NextAuth 认证密钥
    - `NEXTAUTH_URL`：生产环境的完整 URL
    - GitHub 或 Google 认证相关的环境变量（如使用）
@@ -44,8 +45,13 @@
 
 ### 5. 常见问题
 
-1. **数据库迁移失败**：检查数据库连接字符串和权限设置
+1. **数据库迁移失败**：
+   - 检查数据库连接字符串和权限设置
+   - 确认 Supabase 项目设置中已允许 Vercel 的 IP 访问数据库
+   - 密码中的特殊字符已正确编码
+
 2. **登录问题**：确保 NextAuth 环境变量正确配置
+
 3. **图片上传问题**：调整 next.config.js 中的图片域名配置
 
 ### 6. 本地测试部署配置
@@ -55,6 +61,8 @@
 npm run build
 npm run start
 ```
+
+**注意**：在本地开发环境中，您可能无法直接连接到 Supabase 数据库，除非您的 IP 已在 Supabase 项目设置中允许。建议在本地开发时使用本地数据库。
 
 ### 7. 联系支持
 
