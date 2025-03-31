@@ -1,42 +1,64 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
-// 导出配置，禁用静态生成
+// 设置为动态渲染
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// 数据库测试端点，返回连接状态和简单的数据统计
 export async function GET() {
-  // 创建一个隔离的 Prisma 客户端实例
-  const prisma = new PrismaClient({
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL,
-      },
-    },
-  });
-
   try {
-    // 尝试连接数据库并查询
-    const result = await prisma.$queryRaw`SELECT 1 as test`;
-    
+    console.log("GET /api/db-test - 开始测试数据库连接");
+
+    // 测试数据库连接
+    const start = Date.now();
+    await prisma.$connect();
+    const connectTime = Date.now() - start;
+    console.log(`数据库连接成功，耗时 ${connectTime}ms`);
+
+    // 获取基本数据统计
+    const [userCount, toolCount, articleCount] = await Promise.all([
+      prisma.user.count(),
+      prisma.tool.count(),
+      prisma.article.count(),
+    ]);
+
+    // 获取数据库连接信息
+    const url = process.env.DATABASE_URL || 'Not set';
+    const directUrl = process.env.DIRECT_URL || 'Not set';
+
+    // 安全打印数据库URL（隐藏密码）
+    const safeUrl = url.replace(/\/\/([^:]+):([^@]+)@/, '//******:******@');
+    const safeDirectUrl = directUrl.replace(/\/\/([^:]+):([^@]+)@/, '//******:******@');
+
     return NextResponse.json({
-      success: true,
-      message: '数据库连接成功',
-      testResult: result,
+      status: 'success',
+      message: '数据库连接和查询成功',
+      connectTime: `${connectTime}ms`,
+      stats: {
+        users: userCount,
+        tools: toolCount,
+        articles: articleCount,
+      },
+      environment: process.env.NODE_ENV,
+      databaseInfo: {
+        provider: 'postgresql',
+        url: safeUrl,
+        directUrl: safeDirectUrl,
+      },
+      timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
-    return NextResponse.json({
-      success: false,
-      message: '数据库连接失败',
-      error: error.message,
-      // 添加更详细的错误信息，但隐藏敏感数据
-      errorType: error.constructor.name,
-      prismaErrorCode: error.code,
-      // 安全地返回 URL 的一部分
-      dbUrlStart: process.env.DATABASE_URL ? `${process.env.DATABASE_URL.split('@')[0].split(':')[0]}:***@***` : 'not set',
-    }, { status: 500 });
-  } finally {
-    // 关闭 Prisma 连接
-    await prisma.$disconnect();
+  } catch (error) {
+    console.error("数据库连接测试失败:", error);
+    return NextResponse.json(
+      { 
+        status: 'error',
+        message: '数据库连接或查询失败',
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+      },
+      { status: 500 }
+    );
   }
 } 

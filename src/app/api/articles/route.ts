@@ -3,9 +3,15 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
 
+// 设置为动态渲染
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // GET /api/articles - 获取文章列表
 export async function GET(request: Request) {
   try {
+    console.log("GET /api/articles - 开始处理请求");
+    
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -57,6 +63,7 @@ export async function GET(request: Request) {
     // 计算总页数
     const totalPages = Math.ceil(total / limit);
     
+    console.log(`GET /api/articles - 查询到 ${articles.length} 个文章`);
     return NextResponse.json({
       articles,
       pagination: {
@@ -65,11 +72,13 @@ export async function GET(request: Request) {
         currentPage: page,
         limit,
       },
+      total,
+      message: `成功获取 ${articles.length} 个文章`
     });
   } catch (error) {
-    console.error('获取文章列表错误:', error);
+    console.error("GET /api/articles - 错误:", error);
     return NextResponse.json(
-      { error: '获取文章列表失败' },
+      { error: "获取文章列表失败", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

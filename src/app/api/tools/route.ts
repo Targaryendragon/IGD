@@ -4,13 +4,15 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
 import getFavicon from 'get-website-favicon';
 
-// 导出配置，禁用静态生成
+// 设置为动态渲染
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 // GET /api/tools - 获取工具列表
 export async function GET(request: Request) {
   try {
+    console.log("GET /api/tools - 开始处理请求");
+    
     const { searchParams } = new URL(request.url);
     const difficulty = searchParams.get('difficulty');
     const search = searchParams.get('search');
@@ -59,19 +61,16 @@ export async function GET(request: Request) {
     // 获取总工具数量
     const total = await prisma.tool.count({ where });
 
+    console.log(`GET /api/tools - 查询到 ${tools.length} 个工具`);
     return NextResponse.json({
       tools,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      total,
+      message: `成功获取 ${tools.length} 个工具`
     });
   } catch (error) {
-    console.error('获取工具列表错误:', error);
+    console.error("GET /api/tools - 错误:", error);
     return NextResponse.json(
-      { message: '获取工具列表失败', error: (error as Error).message },
+      { error: "获取工具列表失败", details: error.message },
       { status: 500 }
     );
   }
