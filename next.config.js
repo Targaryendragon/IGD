@@ -20,7 +20,6 @@ const nextConfig = {
   // 禁用静态生成，改为完全SSR
   experimental: {
     // 完全禁用静态生成
-    isrMemoryCacheSize: 0,
     isrFlushToDisk: false,
     workerThreads: false,
     cpus: 1,
