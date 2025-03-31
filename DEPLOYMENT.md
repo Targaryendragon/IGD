@@ -5,10 +5,10 @@
 ### 1. 数据库准备
 
 该项目使用 Supabase PostgreSQL 数据库。已配置数据库连接：
-- 数据库主机：`oyldabuxfzntyzcmqwwq.supabase.co`
-- 端口：`5432`
+- 数据库主机：`aws-0-ap-southeast-1.pooler.supabase.com`
+- 端口：`6543`
 - 数据库：`postgres`
-- 用户：`postgres`
+- 用户：`postgres.oyldabuxfzntyzcmqwwq`
 
 需要在 Vercel 环境变量中设置：
 - `DATABASE_URL`：完整的数据库连接字符串
