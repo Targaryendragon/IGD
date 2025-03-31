@@ -17,6 +17,15 @@ const nextConfig = {
   // 增加静态输出配置，避免构建时连接数据库
   output: 'standalone',
   staticPageGenerationTimeout: 120,
+  // 添加webpack配置，处理supports-color缺失问题
+  webpack: (config, { isServer }) => {
+    // 解决supports-color模块缺失问题
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      'supports-color': false,  // 告诉webpack忽略这个模块
+    };
+    return config;
+  },
   images: {
     remotePatterns: [
       {
