@@ -2,10 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  experimental: {
-    // 启用更好的错误处理
-    serverComponentsExternalPackages: [],
-  },
   eslint: {
     // 忽略构建时的ESLint错误
     ignoreDuringBuilds: true,
@@ -20,10 +16,11 @@ const nextConfig = {
   // 禁用静态生成，改为完全SSR
   experimental: {
     // 完全禁用静态生成
-    isrMemoryCacheSize: 0,
     isrFlushToDisk: false,
     workerThreads: false,
     cpus: 1,
+    // 启用更好的错误处理
+    serverComponentsExternalPackages: [],
   },
   // 固定构建ID，避免生成静态文件时的冲突
   generateBuildId: () => 'build',

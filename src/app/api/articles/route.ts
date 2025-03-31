@@ -1,41 +1,55 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, ensureDatabaseConnection } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
+
+// 设置为动态渲染
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // GET /api/articles - 获取文章列表
 export async function GET(request: Request) {
   try {
+    console.log("GET /api/articles - 开始处理请求");
+    
+    // 确保数据库连接已建立
+    await ensureDatabaseConnection();
+    
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
-    const tag = searchParams.get('tag');
+    const search = searchParams.get('search') || '';
+    const tag = searchParams.get('tag') || '';
     
-    // 计算分页偏移
     const skip = (page - 1) * limit;
     
     // 构建查询条件
-    const where = tag
-      ? {
-          tags: {
-            some: {
-              name: tag,
-            },
-          },
-        }
-      : {};
+    const where: any = {};
     
-    // 获取文章总数（用于分页）
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    
+    if (tag) {
+      where.tags = {
+        some: {
+          name: tag,
+        },
+      };
+    }
+    
+    console.log("查询条件:", JSON.stringify(where));
+    
+    // 计算总数
     const total = await prisma.article.count({ where });
+    console.log(`找到符合条件的文章总数: ${total}`);
     
-    // 获取文章列表
+    // 获取文章
     const articles = await prisma.article.findMany({
       where,
-      skip,
-      take: limit,
-      orderBy: {
-        createdAt: 'desc',
-      },
       include: {
         author: {
           select: {
@@ -52,24 +66,33 @@ export async function GET(request: Request) {
           },
         },
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip,
+      take: limit,
     });
     
-    // 计算总页数
+    // 计算分页信息
     const totalPages = Math.ceil(total / limit);
+    
+    console.log(`GET /api/articles - 查询到 ${articles.length} 个文章`);
     
     return NextResponse.json({
       articles,
       pagination: {
         total,
-        totalPages,
-        currentPage: page,
+        page,
         limit,
+        totalPages,
       },
+      message: `成功获取 ${articles.length} 个文章`
     });
   } catch (error) {
-    console.error('获取文章列表错误:', error);
+    console.error("GET /api/articles - 错误:", error);
+    
     return NextResponse.json(
-      { error: '获取文章列表失败' },
+      { error: "获取文章列表失败", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

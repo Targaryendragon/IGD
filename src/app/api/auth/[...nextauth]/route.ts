@@ -5,6 +5,7 @@ import { authOptions } from './auth';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// 创建NextAuth路由处理程序
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
