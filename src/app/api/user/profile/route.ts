@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
 
+// 设置为动态渲染
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // GET /api/user/profile - 获取当前登录用户的信息
 export async function GET() {
   try {
