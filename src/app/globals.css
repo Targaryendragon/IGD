@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-50: #f0f7ff;
+  --primary-100: #e0eefe;
+  --primary-200: #b9ddfe;
+  --primary-300: #7cc3fd;
+  --primary-400: #36a9fa;
+  --primary-500: #0c8fff;
+  --primary-600: #0072e6;
+  --primary-700: #005cb8;
+  --primary-800: #004d99;
+  --primary-900: #00387a;
+  --primary-950: #002552;
+  
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 247, 249, 252;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+@layer components {
+  .container-custom {
+    @apply container mx-auto px-4 max-w-7xl;
+  }
+  
+  .btn-primary {
+    @apply px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+  
+  .btn-primary-outline {
+    @apply px-4 py-2 border border-primary-600 text-primary-600 rounded-md hover:bg-primary-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100;
+  }
+  
+  .nav-link {
+    @apply text-gray-600 hover:text-primary-600 transition-colors duration-200;
+  }
+} 

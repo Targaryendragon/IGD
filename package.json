@@ -1,0 +1,47 @@
+{
+  "name": "igd-community",
+  "version": "1.0.0",
+  "description": "独立游戏开发者社区平台",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed/index.ts"
+  },
+  "keywords": [
+    "独立游戏",
+    "游戏开发",
+    "开发者社区"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.8.0",
+    "@prisma/client": "^6.5.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@uiw/react-md-editor": "^4.0.5",
+    "get-website-favicon": "^0.0.7",
+    "next": "^14.1.0",
+    "next-auth": "^4.24.11",
+    "prisma": "^6.5.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^5.5.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^22.13.14",
+    "autoprefixer": "^10.4.21",
+    "bcrypt": "^5.1.1",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  }
+}
