@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "buildCommand": "npm run deploy:vercel",
+  "buildCommand": "PRISMA_CLIENT_ENGINE_TYPE=binary npx prisma generate && next build",
   "installCommand": "npm install",
   "framework": "nextjs",
   "outputDirectory": ".next",
   "env": {
     "PRISMA_SKIP_POSTINSTALL_GENERATE": "true",
-    "DIRECT_URL": "postgresql://postgres.oyldabuxfzntyzcmqwwq:l1efeU2rbVPv9o1B@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=no-verify"
+    "DIRECT_URL": "postgresql://postgres.oyldabuxfzntyzcmqwwq:l1efeU2rbVPv9o1B@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=no-verify",
+    "DATABASE_URL": "postgresql://postgres.oyldabuxfzntyzcmqwwq:l1efeU2rbVPv9o1B@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=no-verify"
   }
 } 
