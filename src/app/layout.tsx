@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   description: '为独立游戏开发者提供工具、资源、教程和交流平台',
 };
 
+// 设置为动态渲染
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function RootLayout({
   children,
 }: {
