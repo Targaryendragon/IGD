@@ -1,14 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "build": {
-    "env": {
-      "PRISMA_SKIP_POSTINSTALL_GENERATE": "true"
-    }
+  "buildCommand": "npm run deploy:vercel",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "env": {
+    "PRISMA_SKIP_POSTINSTALL_GENERATE": "true"
   }
 } 
