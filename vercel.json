@@ -5,6 +5,7 @@
   "framework": "nextjs",
   "outputDirectory": ".next",
   "env": {
-    "PRISMA_SKIP_POSTINSTALL_GENERATE": "true"
+    "PRISMA_SKIP_POSTINSTALL_GENERATE": "true",
+    "DIRECT_URL": "postgresql://postgres.oyldabuxfzntyzcmqwwq:l1efeU2rbVPv9o1B@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=no-verify"
   }
 } 
