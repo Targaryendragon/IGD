@@ -5,13 +5,14 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "db:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed/index.ts",
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "deploy:vercel": "prisma migrate deploy && prisma generate && next build"
+    "deploy:vercel": "prisma migrate deploy && prisma generate && next build",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build"
   },
   "keywords": [
     "独立游戏",
@@ -46,5 +47,8 @@
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed/index.ts"
+  },
+  "engines": {
+    "node": ">=16.x"
   }
 }
