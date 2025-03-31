@@ -3,18 +3,12 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/next",
-      "config": { "prisma": { "seed": false } }
+      "use": "@vercel/next"
     }
   ],
   "build": {
     "env": {
       "PRISMA_SKIP_POSTINSTALL_GENERATE": "true"
     }
-  },
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "NEXTAUTH_URL": "@nextauth_url"
   }
 } 
