@@ -37,6 +37,7 @@ export async function checkAndResetDatabaseConnection(): Promise<boolean> {
       return true;
     } catch (error) {
       console.error(`[DB-RESET] 重置数据库连接失败，请求ID: ${requestId}`, error);
+      // 即使重置失败，我们也不应该阻止应用程序继续运行
       return false;
     }
   }
@@ -50,11 +51,23 @@ export async function checkAndResetDatabaseConnection(): Promise<boolean> {
 async function resetPrismaConnections(): Promise<void> {
   try {
     // 创建临时Prisma客户端进行内部重置
-    const tempPrisma = new PrismaClient();
+    const tempPrisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL ? 
+            `${process.env.DATABASE_URL}&statement_cache_size=0` : 
+            process.env.DATABASE_URL,
+        },
+      },
+    });
     
-    // 执行简单查询以测试连接
-    console.log('[DB-RESET] 执行测试查询...');
-    await tempPrisma.$queryRaw`SELECT 1 as test`;
+    // 生成随机查询名称，避免冲突
+    const randomQueryName = `reset_test_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    
+    // 执行简单查询以测试连接 - 使用executeRaw而不是queryRaw
+    console.log(`[DB-RESET] 执行测试查询 (${randomQueryName})...`);
+    // 使用executeRaw并添加随机参数避免prepared statement冲突
+    await tempPrisma.$executeRaw`SELECT 1 as ${randomQueryName}`;
     
     // 断开连接
     console.log('[DB-RESET] 断开Prisma连接...');
@@ -66,9 +79,27 @@ async function resetPrismaConnections(): Promise<void> {
       global.gc();
     }
     
+    // 尝试重置全局连接
+    try {
+      console.log('[DB-RESET] 尝试重置Prisma全局状态...');
+      // @ts-ignore - 访问Prisma内部属性
+      const anyGlobal = global as any;
+      if (anyGlobal.prisma) {
+        delete anyGlobal.prisma;
+      }
+      
+      // 清理可能存在的Prisma连接池
+      if (anyGlobal.__prismaConnections) {
+        delete anyGlobal.__prismaConnections;
+      }
+    } catch (globalError) {
+      console.warn('[DB-RESET] 重置全局状态时出现警告:', globalError);
+    }
+    
     console.log('[DB-RESET] 数据库连接重置完成');
   } catch (error) {
     console.error('[DB-RESET] 重置Prisma连接时发生错误:', error);
+    // 我们仍然把错误抛出，但在调用函数中会捕获它
     throw error;
   }
 } 
