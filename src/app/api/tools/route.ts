@@ -114,25 +114,6 @@ export async function GET(request: Request) {
   }
 }
 
-// 从 URL 获取网站图标
-async function getWebsiteIcon(url: string): Promise<string | null> {
-  try {
-    const data = await getFavicon(url);
-    if (data && data.icons && data.icons.length > 0) {
-      // 优先选择较大尺寸的图标
-      const sortedIcons = data.icons.sort((a, b) => {
-        const sizeA = a.width || 0;
-        const sizeB = b.width || 0;
-        return sizeB - sizeA;
-      });
-      return sortedIcons[0].src;
-    }
-  } catch (error) {
-    console.error('获取网站图标失败:', error);
-  }
-  return null;
-}
-
 // POST /api/tools - 创建新工具
 export async function POST(request: Request) {
   try {
@@ -171,9 +152,12 @@ export async function POST(request: Request) {
     }
 
     // 获取网站图标
-    let icon = null;
+    let icon: string | undefined = undefined;
     if (officialLink) {
-      icon = await getWebsiteIcon(officialLink);
+      const iconUrl = await getWebsiteIcon(officialLink);
+      if (iconUrl) {
+        icon = iconUrl;
+      }
     }
     
     // 创建工具
