@@ -67,10 +67,15 @@ export default function HomePage() {
           throw new Error('获取文章失败');
         }
         const data = await response.json();
-        setLatestArticles(data.articles || []);
+        // 确保data.articles是一个数组
+        const articlesData = Array.isArray(data.articles) ? data.articles : [];
+        setLatestArticles(articlesData);
+        
+        console.log('获取文章数据成功:', articlesData);
       } catch (error: any) {
         console.error('获取最新文章错误:', error);
         setErrorArticles(error.message);
+        setLatestArticles([]); // 确保出错时也设置为空数组
       } finally {
         setLoadingArticles(false);
       }
@@ -88,10 +93,15 @@ export default function HomePage() {
           throw new Error('获取工具失败');
         }
         const data = await response.json();
-        setLatestTools(data.tools || []);
+        // 确保data.tools是一个数组
+        const toolsData = Array.isArray(data.tools) ? data.tools : [];
+        setLatestTools(toolsData);
+        
+        console.log('获取工具数据成功:', toolsData);
       } catch (error: any) {
         console.error('获取最新工具错误:', error);
         setErrorTools(error.message);
+        setLatestTools([]); // 确保出错时也设置为空数组
       } finally {
         setLoadingTools(false);
       }
@@ -157,83 +167,92 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {latestTools.map((tool) => (
-                  <Link 
-                    key={tool.id} 
-                    href={`/tools/${tool.slug || tool.id}`}
-                    className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-700 transition-colors"
-                  >
-                    <div className="p-6">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 flex items-center justify-center bg-gray-700 rounded-lg overflow-hidden">
-                          {tool.icon ? (
-                            <img
-                              src={tool.icon}
-                              alt={`${tool.name} icon`}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-2xl font-semibold text-gray-400">
-                              {tool.name.charAt(0)}
+                {latestTools.map((tool) => {
+                  // 确保tool.ratings存在且为数组
+                  const ratings = Array.isArray(tool.ratings) ? tool.ratings : [];
+                  // 确保tool.tags存在且为数组
+                  const tags = Array.isArray(tool.tags) ? tool.tags : [];
+                  // 确保tool._count存在
+                  const count = tool._count || { ratings: 0, comments: 0 };
+                  
+                  return (
+                    <Link 
+                      key={tool.id} 
+                      href={`/tools/${tool.slug || tool.id}`}
+                      className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-700 transition-colors"
+                    >
+                      <div className="p-6">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="w-12 h-12 flex items-center justify-center bg-gray-700 rounded-lg overflow-hidden">
+                            {tool.icon ? (
+                              <img
+                                src={tool.icon}
+                                alt={`${tool.name} icon`}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-2xl font-semibold text-gray-400">
+                                {tool.name?.charAt(0) || "?"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-xl font-semibold text-white">{tool.name}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="flex">
+                                {[1, 2, 3, 4, 5].map((star) => {
+                                  const rating = ratings.length 
+                                    ? ratings.reduce((acc, r) => acc + r.rating, 0) / ratings.length 
+                                    : 0;
+                                  return (
+                                    <svg
+                                      key={star}
+                                      className={`w-4 h-4 ${
+                                        star <= rating
+                                          ? 'text-yellow-400'
+                                          : 'text-gray-600'
+                                      }`}
+                                      fill="currentColor"
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                  );
+                                })}
+                              </div>
+                              <span className="text-sm text-gray-400">
+                                ({count.ratings || 0})
+                              </span>
+                            </div>
+                          </div>
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            tool.difficulty === 'BEGINNER' ? 'bg-green-500/20 text-green-400' :
+                            tool.difficulty === 'INTERMEDIATE' ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-red-500/20 text-red-400'
+                          }`}>
+                            {tool.difficulty === 'BEGINNER' ? '初学者' :
+                             tool.difficulty === 'INTERMEDIATE' ? '中级' : '高级'}
+                          </span>
+                        </div>
+                        <p className="text-gray-400 mb-4 line-clamp-2">
+                          {tool.description}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {tags.slice(0, 3).map((tag) => (
+                            <span key={tag.id} className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded-full">
+                              {tag.name}
+                            </span>
+                          ))}
+                          {tags.length > 3 && (
+                            <span className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded-full">
+                              +{tags.length - 3}
                             </span>
                           )}
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold text-white">{tool.name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="flex">
-                              {[1, 2, 3, 4, 5].map((star) => {
-                                const rating = tool.ratings.length 
-                                  ? tool.ratings.reduce((acc, r) => acc + r.rating, 0) / tool.ratings.length 
-                                  : 0;
-                                return (
-                                  <svg
-                                    key={star}
-                                    className={`w-4 h-4 ${
-                                      star <= rating
-                                        ? 'text-yellow-400'
-                                        : 'text-gray-600'
-                                    }`}
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                  </svg>
-                                );
-                              })}
-                            </div>
-                            <span className="text-sm text-gray-400">
-                              ({tool._count.ratings || 0})
-                            </span>
-                          </div>
-                        </div>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          tool.difficulty === 'BEGINNER' ? 'bg-green-500/20 text-green-400' :
-                          tool.difficulty === 'INTERMEDIATE' ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-red-500/20 text-red-400'
-                        }`}>
-                          {tool.difficulty === 'BEGINNER' ? '初学者' :
-                           tool.difficulty === 'INTERMEDIATE' ? '中级' : '高级'}
-                        </span>
                       </div>
-                      <p className="text-gray-400 mb-4 line-clamp-2">
-                        {tool.description}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {tool.tags.slice(0, 3).map((tag) => (
-                          <span key={tag.id} className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded-full">
-                            {tag.name}
-                          </span>
-                        ))}
-                        {tool.tags.length > 3 && (
-                          <span className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded-full">
-                            +{tool.tags.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -264,46 +283,55 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {latestArticles.map((article) => (
-                  <Link 
-                    key={article.id} 
-                    href={`/articles/${article.slug}`}
-                    className="bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-700 transition-colors"
-                  >
-                    <div className="p-6">
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {article.tags.slice(0, 2).map((tag) => (
-                          <span key={tag.id} className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-full">
-                            {tag.name}
-                          </span>
-                        ))}
-                      </div>
-                      <h3 className="text-xl font-semibold text-white mb-3">{article.title}</h3>
-                      <p className="text-gray-400 mb-4 line-clamp-3">
-                        {article.content.substring(0, 150)}...
-                      </p>
-                      <div className="flex items-center mt-auto text-sm text-gray-500">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 bg-gray-700 rounded-full overflow-hidden">
-                            {article.author.image && (
-                              <img 
-                                src={article.author.image} 
-                                alt={article.author.name} 
-                                className="w-full h-full object-cover"
-                              />
-                            )}
+                {latestArticles.map((article) => {
+                  // 确保article.tags存在且为数组
+                  const tags = Array.isArray(article.tags) ? article.tags : [];
+                  // 确保article.author存在
+                  const author = article.author || { name: '未知作者', id: '' };
+                  // 确保article._count存在
+                  const count = article._count || { comments: 0, likes: 0 };
+                  
+                  return (
+                    <Link 
+                      key={article.id} 
+                      href={`/articles/${article.slug}`}
+                      className="bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-700 transition-colors"
+                    >
+                      <div className="p-6">
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {tags.slice(0, 2).map((tag) => (
+                            <span key={tag.id} className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-full">
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
+                        <h3 className="text-xl font-semibold text-white mb-3">{article.title}</h3>
+                        <p className="text-gray-400 mb-4 line-clamp-3">
+                          {article.content ? article.content.substring(0, 150) + '...' : '暂无内容'}
+                        </p>
+                        <div className="flex items-center mt-auto text-sm text-gray-500">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-gray-700 rounded-full overflow-hidden">
+                              {author.image && (
+                                <img 
+                                  src={author.image} 
+                                  alt={author.name} 
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </div>
+                            <span>{author.name}</span>
                           </div>
-                          <span>{article.author.name}</span>
-                        </div>
-                        <span className="mx-2">·</span>
-                        <span>{new Date(article.createdAt).toLocaleDateString('zh-CN')}</span>
-                        <div className="flex items-center ml-auto space-x-2">
-                          <span>{article._count.comments} 评论</span>
+                          <span className="mx-2">·</span>
+                          <span>{article.createdAt ? new Date(article.createdAt).toLocaleDateString('zh-CN') : '未知日期'}</span>
+                          <div className="flex items-center ml-auto space-x-2">
+                            <span>{count.comments} 评论</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>
