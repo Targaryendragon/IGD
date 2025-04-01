@@ -41,9 +41,18 @@ const difficultyNames = {
 
 // 工具卡片组件
 const ToolCard: React.FC<{ tool: Tool }> = ({ tool }) => {
+  // 确保tool.ratings存在且为数组
+  const ratings = Array.isArray(tool.ratings) ? tool.ratings : [];
+  
+  // 确保tool.tags存在且为数组
+  const tags = Array.isArray(tool.tags) ? tool.tags : [];
+  
+  // 确保tool._count存在
+  const count = tool._count || { ratings: 0 };
+  
   // 计算平均评分
-  const averageRating = tool.ratings.length
-    ? tool.ratings.reduce((acc, r) => acc + r.rating, 0) / tool.ratings.length
+  const averageRating = ratings.length
+    ? ratings.reduce((acc, r) => acc + r.rating, 0) / ratings.length
     : 0;
 
   // 计算评分星星
@@ -74,7 +83,7 @@ const ToolCard: React.FC<{ tool: Tool }> = ({ tool }) => {
               />
             ) : (
               <span className="text-2xl font-semibold text-gray-600 dark:text-gray-300">
-                {tool.name.charAt(0).toUpperCase()}
+                {tool.name?.charAt(0)?.toUpperCase() || '?'}
               </span>
             )}
           </div>
@@ -85,7 +94,7 @@ const ToolCard: React.FC<{ tool: Tool }> = ({ tool }) => {
                 {renderStars(averageRating)}
               </div>
               <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                ({tool._count.ratings || 0})
+                ({count.ratings || 0})
               </span>
             </div>
           </div>
@@ -94,15 +103,15 @@ const ToolCard: React.FC<{ tool: Tool }> = ({ tool }) => {
           {tool.description}
         </p>
         <div className="flex flex-wrap gap-2 mb-4">
-          {tool.tags.map((tag) => (
+          {tags.map((tag) => (
             <span key={tag.id} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-full">
               {tag.name}
             </span>
           ))}
         </div>
         <div className="flex items-center justify-between">
-          <span className={`px-2 py-1 text-xs rounded-full ${difficultyColors[tool.difficulty]}`}>
-            {difficultyNames[tool.difficulty]}
+          <span className={`px-2 py-1 text-xs rounded-full ${difficultyColors[tool.difficulty] || 'text-gray-500 bg-gray-500/10'}`}>
+            {difficultyNames[tool.difficulty] || '未知难度'}
           </span>
         </div>
       </div>
@@ -141,10 +150,16 @@ export default function ToolsPage() {
         }
         
         const data = await response.json();
-        setTools(data.tools);
+        
+        // 确保data.tools是一个数组
+        const toolsData = Array.isArray(data.tools) ? data.tools : [];
+        setTools(toolsData);
+        
+        console.log('获取工具数据成功:', toolsData);
       } catch (err) {
         console.error('获取工具错误:', err);
         setError(err instanceof Error ? err.message : '未知错误');
+        setTools([]); // 确保出错时设置为空数组
       } finally {
         setLoading(false);
       }
