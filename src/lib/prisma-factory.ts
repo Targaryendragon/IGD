@@ -155,4 +155,31 @@ export async function ensureDatabaseConnection(): Promise<void> {
     console.error('确保数据库连接失败:', error);
     throw error;
   }
-} 
+}
+
+/**
+ * withPrisma 函数，用于处理Prisma操作
+ * 为了兼容现有代码而添加
+ */
+export async function withPrisma<T>(callback: (prisma: PrismaClient) => Promise<T>): Promise<T> {
+  try {
+    // 在Serverless环境中记录数据库连接信息
+    if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+      console.log('数据库环境: Serverless');
+      console.log(`使用的数据库URL类型: ${process.env.DATABASE_URL?.includes('sslmode=require') ? 'sslmode=require' : 'sslmode=no-verify'}`);
+      console.log('Serverless环境: 创建了新的Prisma客户端实例');
+    }
+    
+    // 确保数据库连接已建立
+    await ensureDatabaseConnection();
+    
+    // 执行回调函数
+    return await callback(prisma);
+  } catch (error) {
+    console.error('Prisma操作错误:', error);
+    throw error;
+  }
+}
+
+// 导出默认的prisma客户端
+export default prisma;
