@@ -4,6 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
 import getFavicon from 'get-website-favicon';
 import { getWebsiteIcon } from '@/lib/utils/website';
 import { withPrisma } from '@/lib/prisma-factory';
+import { checkAndResetDatabaseConnection } from '@/lib/reset-db-connection';
 
 // 设置为动态渲染
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,9 @@ export const revalidate = 0;
 export async function GET(request: Request) {
   try {
     console.log("GET /api/tools - 开始处理请求");
+    
+    // 检查并重置数据库连接，用于处理Lambda热启动问题
+    await checkAndResetDatabaseConnection();
     
     const { searchParams } = new URL(request.url);
     const difficulty = searchParams.get('difficulty');
@@ -117,6 +121,9 @@ export async function GET(request: Request) {
 // POST /api/tools - 创建新工具
 export async function POST(request: Request) {
   try {
+    // 检查并重置数据库连接，用于处理Lambda热启动问题
+    await checkAndResetDatabaseConnection();
+    
     const session = await getServerSession(authOptions);
     
     // 检查用户是否登录
