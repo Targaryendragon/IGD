@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
-import getFavicon from 'get-website-favicon';
 import { getWebsiteIcon } from '@/lib/utils/website';
-import { withPrisma } from '@/lib/prisma-factory';
 import { checkAndResetDatabaseConnection } from '@/lib/reset-db-connection';
+import { PrismaClient } from '@prisma/client';
+
+// 创建一个 Prisma 客户端实例
+const prisma = new PrismaClient();
 
 // 设置为动态渲染
 export const dynamic = 'force-dynamic';
@@ -52,61 +54,58 @@ export async function GET(request: Request) {
     
     console.log("查询条件:", JSON.stringify(where));
     
-    // 使用withPrisma工厂方法执行数据库操作
-    return await withPrisma(async (prisma) => {
-      // 计算总数
-      const total = await prisma.tool.count({ where });
-      console.log(`找到符合条件的工具总数: ${total}`);
-      
-      // 获取工具列表
-      const tools = await prisma.tool.findMany({
-        where,
-        include: {
-          tags: true,
-          ratings: {
-            select: {
-              rating: true,
-            },
-          },
-          _count: {
-            select: {
-              ratings: true,
-            },
+    // 计算总数
+    const total = await prisma.tool.count({ where });
+    console.log(`找到符合条件的工具总数: ${total}`);
+    
+    // 获取工具列表
+    const tools = await prisma.tool.findMany({
+      where,
+      include: {
+        tags: true,
+        ratings: {
+          select: {
+            rating: true,
           },
         },
-        orderBy: {
-          createdAt: 'desc',
+        _count: {
+          select: {
+            ratings: true,
+          },
         },
-        skip,
-        take: limit,
-      });
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip,
+      take: limit,
+    });
+    
+    // 计算平均评分
+    const toolsWithRatings = tools.map(tool => {
+      const ratings = tool.ratings || [];
+      const totalRating = ratings.reduce((sum, r) => sum + r.rating, 0);
+      const averageRating = ratings.length > 0 ? totalRating / ratings.length : 0;
       
-      // 计算平均评分
-      const toolsWithRatings = tools.map(tool => {
-        const ratings = tool.ratings || [];
-        const totalRating = ratings.reduce((sum, r) => sum + r.rating, 0);
-        const averageRating = ratings.length > 0 ? totalRating / ratings.length : 0;
-        
-        // 移除ratings数组以减少响应大小
-        const { ratings: _, ...toolWithoutRatings } = tool;
-        
-        return {
-          ...toolWithoutRatings,
-          averageRating: Math.round(averageRating * 10) / 10, // 保留一位小数
-        };
-      });
+      // 移除ratings数组以减少响应大小
+      const { ratings: _, ...toolWithoutRatings } = tool;
       
-      console.log(`GET /api/tools - 查询到 ${tools.length} 个工具`);
-      return NextResponse.json({
-        tools: toolsWithRatings,
-        total,
-        pagination: {
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
-        message: `成功获取 ${tools.length} 个工具`
-      });
+      return {
+        ...toolWithoutRatings,
+        averageRating: Math.round(averageRating * 10) / 10, // 保留一位小数
+      };
+    });
+    
+    console.log(`GET /api/tools - 查询到 ${tools.length} 个工具`);
+    return NextResponse.json({
+      tools: toolsWithRatings,
+      total,
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      message: `成功获取 ${tools.length} 个工具`
     });
   } catch (error) {
     console.error("GET /api/tools - 错误:", error);
@@ -145,66 +144,63 @@ export async function POST(request: Request) {
       );
     }
     
-    // 使用withPrisma工厂方法执行数据库操作
-    return await withPrisma(async (prisma) => {
-      // 查找用户
-      const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true },
-      });
-      
-      if (!user) {
-        return NextResponse.json(
-          { error: '用户不存在' },
-          { status: 404 }
-        );
-      }
-
-      // 获取网站图标
-      let icon: string | undefined = undefined;
-      if (officialLink) {
-        const iconUrl = await getWebsiteIcon(officialLink);
-        if (iconUrl) {
-          icon = iconUrl;
-        }
-      }
-      
-      // 创建工具
-      const tool = await prisma.tool.create({
-        data: {
-          name,
-          description,
-          content,
-          difficulty,
-          officialLink,
-          downloadLink,
-          icon,
-          author: {
-            connect: { id: user.id },
-          },
-          // 创建工具标签关联
-          tags: tags && tags.length > 0
-            ? {
-                create: tags.map((name: string) => ({
-                  name,
-                })),
-              }
-            : undefined,
-        },
-        include: {
-          author: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-          tags: true,
-        },
-      });
-      
-      return NextResponse.json(tool);
+    // 查找用户
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
     });
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: '用户不存在' },
+        { status: 404 }
+      );
+    }
+
+    // 获取网站图标
+    let icon: string | undefined = undefined;
+    if (officialLink) {
+      const iconUrl = await getWebsiteIcon(officialLink);
+      if (iconUrl) {
+        icon = iconUrl;
+      }
+    }
+    
+    // 创建工具
+    const tool = await prisma.tool.create({
+      data: {
+        name,
+        description,
+        content,
+        difficulty,
+        officialLink,
+        downloadLink,
+        icon,
+        author: {
+          connect: { id: user.id },
+        },
+        // 创建工具标签关联
+        tags: tags && tags.length > 0
+          ? {
+              create: tags.map((name: string) => ({
+                name,
+              })),
+            }
+          : undefined,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+        tags: true,
+      },
+    });
+    
+    return NextResponse.json(tool);
   } catch (error) {
     console.error('创建工具错误:', error);
     return NextResponse.json(
@@ -212,4 +208,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}
