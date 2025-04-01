@@ -3,6 +3,7 @@ import { prisma, ensureDatabaseConnection } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
 import getFavicon from 'get-website-favicon';
+import { getWebsiteIcon } from '@/lib/utils/website';
 
 // 设置为动态渲染
 export const dynamic = 'force-dynamic';
