@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { prisma, ensureDatabaseConnection } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
+import { initializeApi } from '../api-init';
 
 // 设置为动态渲染
 export const dynamic = 'force-dynamic';
@@ -12,8 +13,8 @@ export async function GET(request: Request) {
   try {
     console.log("GET /api/articles - 开始处理请求");
     
-    // 确保数据库连接已建立
-    await ensureDatabaseConnection();
+    // 初始化API
+    await initializeApi();
     
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -90,7 +91,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("GET /api/articles - 错误:", error);
-    
     return NextResponse.json(
       { error: "获取文章列表失败", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }

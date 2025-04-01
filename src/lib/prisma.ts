@@ -6,13 +6,13 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-// 记录Prisma实例的状态
-let prisma: PrismaClient;
-
 // 检查数据库URL是否包含SSL设置
 const databaseUrl = process.env.DATABASE_URL || '';
 const hasNoVerify = databaseUrl.includes('sslmode=no-verify');
 const hasRequire = databaseUrl.includes('sslmode=require');
+
+// 检测Serverless环境
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION);
 
 // 获取优化的数据库URL
 function getDbUrl() {
@@ -25,6 +25,14 @@ function getDbUrl() {
       : `${url}?sslmode=no-verify`;
   }
   
+  // 在Serverless环境中添加连接池设置，避免prepared statement问题
+  if (isServerless && url && !url.includes('connection_limit')) {
+    url = url.includes('?')
+      ? `${url}&connection_limit=1&pool_timeout=20`
+      : `${url}?connection_limit=1&pool_timeout=20`;
+  }
+  
+  console.log('数据库环境:', isServerless ? 'Serverless' : process.env.NODE_ENV);
   console.log('使用的数据库URL类型:', 
     hasNoVerify ? 'sslmode=no-verify' : 
     hasRequire ? 'sslmode=require' : 
@@ -34,16 +42,18 @@ function getDbUrl() {
 }
 
 // 根据环境决定如何创建Prisma客户端
-if (process.env.NODE_ENV === 'production') {
-  // 在生产环境中每次请求创建一个新实例，防止"prepared statement already exists"错误
+let prisma: PrismaClient;
+
+if (isServerless) {
+  // 在Serverless环境中每次请求创建一个新实例，防止"prepared statement already exists"错误
   prisma = new PrismaClient({
-    log: ['error'],
-    datasources: {
-      db: {
-        url: getDbUrl(),
-      },
-    },
-    errorFormat: 'pretty',
+    datasources: { db: { url: getDbUrl() } }
+  });
+  console.log('Serverless环境: 创建了新的Prisma客户端实例');
+} else if (process.env.NODE_ENV === 'production') {
+  // 非Serverless的生产环境
+  prisma = new PrismaClient({
+    datasources: { db: { url: getDbUrl() } }
   });
   console.log('生产环境: 创建了新的Prisma客户端实例');
 } else {
@@ -51,12 +61,7 @@ if (process.env.NODE_ENV === 'production') {
   if (!global.prisma) {
     global.prisma = new PrismaClient({
       log: ['query', 'error', 'warn'],
-      datasources: {
-        db: {
-          url: getDbUrl(),
-        },
-      },
-      errorFormat: 'pretty',
+      datasources: { db: { url: getDbUrl() } }
     });
     console.log('开发环境: 创建了新的Prisma客户端实例');
   }
@@ -82,6 +87,11 @@ prisma.$use(async (params, next) => {
         console.error('检测到表名冲突错误，这可能是由Prisma的表命名策略导致的');
         console.error('请尝试在schema.prisma中添加表前缀或使用relationMode="prisma"');
       }
+      
+      if (error.message.includes('prepared statement') && error.message.includes('already exists')) {
+        console.error('检测到prepared statement错误，这可能是由Serverless环境中的连接池问题导致的');
+        console.error('在Serverless环境中已将连接限制设为1，每个请求会创建新的Prisma实例');
+      }
     }
     
     throw error;
@@ -96,34 +106,41 @@ let isConnected = false;
 
 // 确保连接
 export async function ensureDatabaseConnection() {
-  if (!isConnected) {
-    try {
+  try {
+    // 在Serverless环境中，每次请求尝试新建连接
+    if (isServerless) {
+      await prisma.$connect();
+      console.log('已建立数据库连接（Serverless环境）');
+    } else if (!isConnected) {
       await prisma.$connect();
       isConnected = true;
       console.log('已建立数据库连接');
-    } catch (error) {
-      console.error('连接数据库失败:', error);
-      throw error;
     }
+  } catch (error) {
+    console.error('连接数据库失败:', error);
+    throw error;
   }
   return prisma;
 }
 
-// 确保在应用关闭时断开连接
-process.on('beforeExit', async () => {
-  if (isConnected) {
-    await prisma.$disconnect();
-    isConnected = false;
-    console.log('Prisma客户端已断开连接');
-  }
-});
-
-// 处理错误事件
-process.on('uncaughtException', async (error) => {
-  console.error('未捕获的异常，断开Prisma连接:', error);
-  if (isConnected) {
-    await prisma.$disconnect();
-    isConnected = false;
-  }
-  process.exit(1);
-}); 
+// 非Serverless环境下的连接关闭处理
+if (!isServerless) {
+  // 确保在应用关闭时断开连接
+  process.on('beforeExit', async () => {
+    if (isConnected) {
+      await prisma.$disconnect();
+      isConnected = false;
+      console.log('Prisma客户端已断开连接');
+    }
+  });
+  
+  // 处理错误事件
+  process.on('uncaughtException', async (error) => {
+    console.error('未捕获的异常，断开Prisma连接:', error);
+    if (isConnected) {
+      await prisma.$disconnect();
+      isConnected = false;
+    }
+    process.exit(1);
+  });
+} 
