@@ -11,38 +11,56 @@ let isFirstRequest = true;
  * 
  * @returns true if reset was performed
  */
-export async function checkAndResetDatabaseConnection(): Promise<boolean> {
-  const now = Date.now();
-  const timeSinceLastRequest = now - lastRequestTime;
-  requestCounter++;
-  
-  // 记录请求时间用于下次检测
-  lastRequestTime = now;
-  
-  // 获取唯一的请求ID，用于日志标识
-  const requestId = `req-${now}-${Math.random().toString(36).substr(2, 5)}`;
-  
-  console.log(`[DB-RESET] 请求 #${requestCounter}, ID: ${requestId}, 自上次请求已过 ${timeSinceLastRequest}ms`);
-  
-  // 如果是首次请求或已经超过30秒没有请求，则进行重置
-  // 这可能表明Lambda实例已被冻结然后热启动
-  if (isFirstRequest || timeSinceLastRequest > 30000) {
-    console.log(`[DB-RESET] 检测到Lambda ${isFirstRequest ? '首次启动' : '热启动'}, 重置数据库连接...`);
-    isFirstRequest = false;
+import { PrismaClient } from '@prisma/client';
+
+// 追踪上次请求时间
+let lastRequestTime = Date.now();
+let requestCounter = 0;
+
+// 检查并重置数据库连接
+export async function checkAndResetDatabaseConnection() {
+  try {
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastRequestTime;
+    const requestId = `req-${now}-${Math.random().toString(36).substr(2, 8)}`;
     
-    try {
-      // 尝试强制重置连接池
-      await resetPrismaConnections();
-      console.log(`[DB-RESET] 数据库连接重置成功，请求ID: ${requestId}`);
-      return true;
-    } catch (error) {
-      console.error(`[DB-RESET] 重置数据库连接失败，请求ID: ${requestId}`, error);
-      // 即使重置失败，我们也不应该阻止应用程序继续运行
-      return false;
+    requestCounter++;
+    console.log(`[DB-RESET] 请求 #${requestCounter}, ID: ${requestId}, 自上次请求已过 ${timeSinceLastRequest}ms`);
+    
+    // 如果是Lambda冷启动或距离上次请求较长时间（超过3秒），尝试重置连接
+    if (requestCounter === 1 || timeSinceLastRequest > 3000) {
+      console.log(`[DB-RESET] 检测到Lambda ${requestCounter === 1 ? '首次启动' : '长时间空闲'}, 重置数据库连接...`);
+      
+      // 重置Prisma连接
+      try {
+        // 创建测试查询ID
+        const testQueryId = `reset_test_${now}_${Math.random().toString(36).substr(2, 8)}`;
+        console.log(`[DB-RESET] 执行测试查询 (${testQueryId})...`);
+        
+        // 使用一个新的Prisma实例执行查询
+        const prisma = new PrismaClient();
+        await prisma.$connect();
+        
+        // 执行简单查询
+        await prisma.$queryRaw`SELECT 1 as reset_test`;
+        
+        // 关闭连接
+        await prisma.$disconnect();
+        
+        console.log(`[DB-RESET] 数据库连接重置成功`);
+      } catch (error) {
+        console.error(`[DB-RESET] 重置数据库连接失败，请求ID: ${requestId}`, error);
+        console.error(`[DB-RESET] 重置Prisma连接时发生错误:`, error);
+      }
     }
+    
+    // 更新上次请求时间
+    lastRequestTime = now;
+    return true;
+  } catch (error) {
+    console.error('检查数据库连接状态失败:', error);
+    return false;
   }
-  
-  return false;
 }
 
 /**
