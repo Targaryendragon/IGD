@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   // 如果环境变量不存在，这里会报错：
   // Error: Environment variable not found: DATABASE_URL
   directUrl = env("DIRECT_URL")
@@ -27,30 +27,30 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  tools         Tool[]
-  articles      Article[]
-  comments      Comment[]
-  toolRatings   ToolRating[]
-  favorites     Favorite[]
-  likes         Like[]
+  accounts    Account[]
+  sessions    Session[]
+  tools       Tool[]
+  articles    Article[]
+  comments    Comment[]
+  toolRatings ToolRating[]
+  favorites   Favorite[]
+  likes       Like[]
 }
 
 // NextAuth认证相关模型
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?  @db.Text
-  access_token       String?  @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?  @db.Text
-  session_state      String?
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -67,111 +67,113 @@ model Session {
 
 // 开发工具模型
 model Tool {
-  id            String      @id @default(cuid())
-  name          String
-  description   String
-  content       String      @db.Text
-  difficulty    Difficulty
-  officialLink  String?
-  downloadLink  String?
-  icon          String?     // 工具图标 URL
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  authorId      String
-  
-  author        User        @relation(fields: [authorId], references: [id])
-  tags          ToolTag[]
-  ratings       ToolRating[]
-  comments      Comment[]
-  favorites     Favorite[]
+  id           String     @id @default(cuid())
+  name         String
+  description  String
+  content      String     @db.Text
+  difficulty   Difficulty
+  officialLink String?
+  downloadLink String?
+  icon         String? // 工具图标 URL
+  status       ToolStatus @default(PENDING)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  authorId     String
+
+  author    User         @relation(fields: [authorId], references: [id])
+  tags      ToolTag[]
+  ratings   ToolRating[]
+  comments  Comment[]
+  favorites Favorite[]
 }
 
 // 文章模型
 model Article {
-  id          String      @id @default(cuid())
-  title       String
-  slug        String      @unique
-  summary     String      @db.Text
-  content     String      @db.Text
-  coverImage  String?
-  published   Boolean     @default(false)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  authorId    String
-  
-  author      User        @relation(fields: [authorId], references: [id])
-  tags        ArticleTag[]
-  comments    Comment[]
-  likes       Like[]
-  favorites   Favorite[]
+  id         String        @id @default(cuid())
+  title      String
+  slug       String        @unique
+  summary    String        @db.Text
+  content    String        @db.Text
+  coverImage String?
+  published  Boolean       @default(false)
+  status     ArticleStatus @default(DRAFT)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  authorId   String
+
+  author    User         @relation(fields: [authorId], references: [id])
+  tags      ArticleTag[]
+  comments  Comment[]
+  likes     Like[]
+  favorites Favorite[]
 }
 
 // 评论模型
 model Comment {
-  id          String    @id @default(cuid())
-  content     String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  authorId    String
-  toolId      String?
-  articleId   String?
-  
-  author      User      @relation(fields: [authorId], references: [id])
-  tool        Tool?     @relation(fields: [toolId], references: [id])
-  article     Article?  @relation(fields: [articleId], references: [id])
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  authorId  String
+  toolId    String?
+  articleId String?
+
+  author  User     @relation(fields: [authorId], references: [id])
+  tool    Tool?    @relation(fields: [toolId], references: [id])
+  article Article? @relation(fields: [articleId], references: [id])
 }
 
 // 工具评分模型
 model ToolRating {
-  id          String    @id @default(cuid())
-  rating      Int       @db.SmallInt
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  userId      String
-  toolId      String
-  
-  user        User      @relation(fields: [userId], references: [id])
-  tool        Tool      @relation(fields: [toolId], references: [id])
-  
+  id        String   @id @default(cuid())
+  rating    Int      @db.SmallInt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  toolId    String
+
+  user User @relation(fields: [userId], references: [id])
+  tool Tool @relation(fields: [toolId], references: [id])
+
   @@unique([userId, toolId])
 }
 
 // 收藏模型
 model Favorite {
-  id          String    @id @default(cuid())
-  createdAt   DateTime  @default(now())
-  userId      String
-  toolId      String?
-  articleId   String?
-  
-  user        User      @relation(fields: [userId], references: [id])
-  tool        Tool?     @relation(fields: [toolId], references: [id])
-  article     Article?  @relation(fields: [articleId], references: [id])
-  
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+  toolId    String?
+  articleId String?
+
+  user    User     @relation(fields: [userId], references: [id])
+  tool    Tool?    @relation(fields: [toolId], references: [id])
+  article Article? @relation(fields: [articleId], references: [id])
+
   @@unique([userId, toolId])
   @@unique([userId, articleId])
 }
 
 // 点赞模型
 model Like {
-  id          String    @id @default(cuid())
-  createdAt   DateTime  @default(now())
-  userId      String
-  articleId   String
-  
-  user        User      @relation(fields: [userId], references: [id])
-  article     Article   @relation(fields: [articleId], references: [id])
-  
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+  articleId String
+
+  user    User    @relation(fields: [userId], references: [id])
+  article Article @relation(fields: [articleId], references: [id])
+
   @@unique([userId, articleId])
 }
 
 // 工具标签模型
 model ToolTag {
-  id      String  @id @default(cuid())
-  name    String
-  toolId  String
-  tool    Tool    @relation(fields: [toolId], references: [id])
-  
+  id     String @id @default(cuid())
+  name   String
+  toolId String
+  tool   Tool   @relation(fields: [toolId], references: [id])
+
   @@unique([name, toolId])
 }
 
@@ -181,7 +183,7 @@ model ArticleTag {
   name      String
   articleId String
   article   Article @relation(fields: [articleId], references: [id])
-  
+
   @@unique([name, articleId])
 }
 
@@ -190,4 +192,18 @@ enum Difficulty {
   BEGINNER
   INTERMEDIATE
   ADVANCED
-} 
+}
+
+// 工具状态枚举
+enum ToolStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// 文章状态枚举
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  REJECTED
+}
