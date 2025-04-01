@@ -4,10 +4,16 @@
   "installCommand": "npm install supports-color",
   "framework": "nextjs",
   "outputDirectory": ".next",
+  "functions": {
+    "api/**/*.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
   "env": {
     "PRISMA_SKIP_POSTINSTALL_GENERATE": "true",
-    "DIRECT_URL": "postgresql://postgres.oyldabuxfzntyzcmqwwq:l1efeU2rbVPv9o1B@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=no-verify",
-    "DATABASE_URL": "postgresql://postgres.oyldabuxfzntyzcmqwwq:l1efeU2rbVPv9o1B@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=no-verify",
+    "DIRECT_URL": "postgresql://postgres.oyldabuxfzntyzcmqwwq:l1efeU2rbVPv9o1B@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=no-verify&connection_limit=1&pool_timeout=20",
+    "DATABASE_URL": "postgresql://postgres.oyldabuxfzntyzcmqwwq:l1efeU2rbVPv9o1B@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=no-verify&connection_limit=1&pool_timeout=20",
     "NEXTAUTH_SECRET": "e5ec1025f0729eee6ac5c36a8851a01e0dc9373584b9d9086227c89e66718994",
     "NEXTAUTH_URL": "https://igd-mu.vercel.app",
     "NODE_ENV": "production",

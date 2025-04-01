@@ -1,31 +1,34 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-// 中间件函数，处理所有请求
-export function middleware(request: NextRequest) {
-  // 设置缓存控制头，禁用缓存
-  const response = NextResponse.next({
-    headers: {
-      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-    },
-  });
+// 记录请求信息的中间件
+export async function middleware(request: NextRequest) {
+  // 获取请求路径
+  const pathname = request.nextUrl.pathname;
   
-  return response;
+  // 仅记录API请求
+  if (pathname.startsWith('/api/')) {
+    console.log(`[${new Date().toISOString()}] 请求: ${request.method} ${pathname}`);
+    
+    // 对于API请求，添加特殊响应头以帮助调试
+    const response = NextResponse.next();
+    
+    // 添加请求跟踪ID
+    const requestId = crypto.randomUUID();
+    response.headers.set('X-Request-ID', requestId);
+    
+    // 允许查看Prisma相关错误
+    response.headers.set('X-Prisma-Debug', '1');
+    
+    return response;
+  }
+  
+  return NextResponse.next();
 }
 
-// 配置中间件匹配的路径
+// 配置匹配路径
 export const config = {
   matcher: [
     // 匹配所有API路由
     '/api/:path*',
-    // 匹配主页和其他重要页面
-    '/',
-    '/profile',
-    '/login',
-    '/register',
-    '/tools',
-    '/articles',
   ],
 };

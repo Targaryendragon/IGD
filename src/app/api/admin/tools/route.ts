@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
-import { prisma, ensureDatabaseConnection } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
+import { initializeApi } from '../../api-init';
 
 // 设置为动态渲染
 export const dynamic = 'force-dynamic';
@@ -12,8 +13,8 @@ export async function GET(request: Request) {
   try {
     console.log("GET /api/admin/tools - 开始处理请求");
     
-    // 确保数据库连接已建立
-    await ensureDatabaseConnection();
+    // 初始化API
+    await initializeApi();
     
     const session = await getServerSession(authOptions);
     
@@ -118,7 +119,7 @@ export async function PUT(request: Request) {
     console.log("PUT /api/admin/tools - 开始处理请求");
     
     // 确保数据库连接已建立
-    await ensureDatabaseConnection();
+    await initializeApi();
     
     const session = await getServerSession(authOptions);
     
@@ -197,7 +198,7 @@ export async function DELETE(request: Request) {
     console.log("DELETE /api/admin/tools - 开始处理请求");
     
     // 确保数据库连接已建立
-    await ensureDatabaseConnection();
+    await initializeApi();
     
     const session = await getServerSession(authOptions);
     

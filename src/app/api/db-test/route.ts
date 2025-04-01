@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { prisma, ensureDatabaseConnection } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { initializeDatabase } from '@/lib/db-init';
+import { initializeApi } from '../api-init';
 
 // 设置为动态渲染
 export const dynamic = 'force-dynamic';
@@ -9,6 +10,9 @@ export const revalidate = 0;
 // GET /api/db-test - 测试数据库连接
 export async function GET() {
   try {
+    // 初始化API
+    await initializeApi();
+    
     console.log('开始测试数据库连接...');
     
     // 初始化数据库连接
