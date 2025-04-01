@@ -43,6 +43,7 @@ if (process.env.NODE_ENV === 'production') {
         url: getDbUrl(),
       },
     },
+    errorFormat: 'pretty',
   });
   console.log('生产环境: 创建了新的Prisma客户端实例');
 } else {
@@ -55,6 +56,7 @@ if (process.env.NODE_ENV === 'production') {
           url: getDbUrl(),
         },
       },
+      errorFormat: 'pretty',
     });
     console.log('开发环境: 创建了新的Prisma客户端实例');
   }
@@ -62,6 +64,29 @@ if (process.env.NODE_ENV === 'production') {
   prisma = global.prisma;
   console.log('开发环境: 使用现有的Prisma客户端实例');
 }
+
+// 添加中间件记录查询性能并处理错误
+prisma.$use(async (params, next) => {
+  try {
+    const start = Date.now();
+    const result = await next(params);
+    const end = Date.now();
+    console.log(`Prisma查询 ${params.model}.${params.action} 耗时 ${end - start}ms`);
+    return result;
+  } catch (error) {
+    console.error(`Prisma查询错误 ${params.model}.${params.action}:`, error);
+    
+    // 记录详细错误信息，对特定错误进行处理
+    if (error instanceof Error) {
+      if (error.message.includes('relation "api" already exists')) {
+        console.error('检测到表名冲突错误，这可能是由Prisma的表命名策略导致的');
+        console.error('请尝试在schema.prisma中添加表前缀或使用relationMode="prisma"');
+      }
+    }
+    
+    throw error;
+  }
+});
 
 // 导出实例
 export { prisma };
@@ -101,13 +126,4 @@ process.on('uncaughtException', async (error) => {
     isConnected = false;
   }
   process.exit(1);
-});
-
-// 添加中间件记录查询性能
-prisma.$use(async (params, next) => {
-  const start = Date.now();
-  const result = await next(params);
-  const end = Date.now();
-  console.log(`Prisma查询 ${params.model}.${params.action} 耗时 ${end - start}ms`);
-  return result;
 }); 

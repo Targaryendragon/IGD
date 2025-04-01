@@ -11,6 +11,7 @@ datasource db {
   // 如果环境变量不存在，这里会报错：
   // Error: Environment variable not found: DATABASE_URL
   directUrl = env("DIRECT_URL")
+  relationMode = "prisma"
 }
 
 // 用户模型

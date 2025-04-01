@@ -1,117 +1,81 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { PrismaClient } from '@prisma/client';
+import { prisma, ensureDatabaseConnection } from '@/lib/prisma';
+import { initializeDatabase } from '@/lib/db-init';
 
 // 设置为动态渲染
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// 数据库测试端点，用于检测和诊断连接问题
+// GET /api/db-test - 测试数据库连接
 export async function GET() {
   try {
-    console.log("GET /api/db-test - 开始测试数据库连接");
-    console.log("环境:", process.env.NODE_ENV);
-    console.log("Vercel环境:", process.env.VERCEL_ENV);
+    console.log('开始测试数据库连接...');
     
-    // 输出数据库连接信息（隐藏敏感数据）
-    const dbUrl = process.env.DATABASE_URL || 'Not set';
-    const dbDirectUrl = process.env.DIRECT_URL || 'Not set';
-    console.log("DATABASE_URL是否设置:", Boolean(process.env.DATABASE_URL));
-    console.log("DIRECT_URL是否设置:", Boolean(process.env.DIRECT_URL));
+    // 初始化数据库连接
+    const initResult = await initializeDatabase();
     
-    // 模拟遮蔽后的URL
-    const safeDbUrl = dbUrl.replace(/\/\/([^:]+):([^@]+)@/, '//******:******@');
-    console.log("数据库URL:", safeDbUrl);
+    if (!initResult) {
+      return NextResponse.json(
+        { status: 'error', message: '数据库初始化失败' },
+        { status: 500 }
+      );
+    }
     
-    // 尝试创建一个独立的Prisma客户端实例进行测试
-    console.log("创建测试用Prisma客户端...");
-    const testPrisma = new PrismaClient({
-      datasources: {
-        db: {
-          url: process.env.DATABASE_URL,
-        },
-      },
+    // 获取数据库统计信息
+    const stats = {
+      users: await prisma.user.count(),
+      tools: await prisma.tool.count(),
+      articles: await prisma.article.count(),
+    };
+    
+    // 检查数据库版本和配置
+    let dbInfo;
+    try {
+      const result = await prisma.$queryRaw`SELECT version(), current_database()`;
+      dbInfo = result;
+    } catch (error) {
+      console.error('获取数据库信息失败:', error);
+      dbInfo = { error: String(error) };
+    }
+    
+    // 检查Prisma查询
+    const testQuery = await prisma.user.findFirst({
+      select: { id: true },
+      take: 1,
     });
-    
-    // 测试连接
-    console.log("尝试连接到数据库...");
-    const start = Date.now();
-    await testPrisma.$connect();
-    const connectTime = Date.now() - start;
-    console.log(`数据库连接成功，耗时 ${connectTime}ms`);
-    
-    // 尝试执行一个简单查询
-    console.log("尝试执行基本查询...");
-    const [userCount, toolCount, articleCount] = await Promise.all([
-      testPrisma.user.count(),
-      testPrisma.tool.count(),
-      testPrisma.article.count(),
-    ]);
-    console.log(`查询结果: ${userCount}个用户, ${toolCount}个工具, ${articleCount}篇文章`);
-    
-    // 测试特定查询
-    console.log("尝试获取工具列表...");
-    const tools = await testPrisma.tool.findMany({
-      take: 2,
-      include: {
-        tags: true,
-        ratings: true,
-      }
-    });
-    console.log(`成功获取工具，数量: ${tools.length}`);
-    
-    // 尝试获取文章
-    console.log("尝试获取文章列表...");
-    const articles = await testPrisma.article.findMany({
-      take: 2,
-      include: {
-        tags: true,
-      }
-    });
-    console.log(`成功获取文章，数量: ${articles.length}`);
-    
-    // 断开测试客户端
-    await testPrisma.$disconnect();
-    console.log("测试客户端已断开连接");
     
     return NextResponse.json({
       status: 'success',
-      message: '数据库连接和查询测试成功',
-      connectTime: `${connectTime}ms`,
-      stats: {
-        users: userCount,
-        tools: toolCount,
-        articles: articleCount,
-      },
-      samples: {
-        tools: tools.map(tool => ({
-          id: tool.id,
-          name: tool.name,
-          tagsCount: tool.tags.length,
-          ratingsCount: tool.ratings.length,
-        })),
-        articles: articles.map(article => ({
-          id: article.id,
-          title: article.title,
-          tagsCount: article.tags.length,
-        })),
-      },
-      environment: process.env.NODE_ENV,
-      databaseInfo: {
-        provider: 'postgresql',
-        url: safeDbUrl,
-        hasDirectUrl: Boolean(process.env.DIRECT_URL),
-      },
+      message: '数据库连接正常',
       timestamp: new Date().toISOString(),
+      stats,
+      dbInfo,
+      testQuery: testQuery ? '成功' : '无用户数据',
+      environment: process.env.NODE_ENV,
+      databaseUrl: process.env.DATABASE_URL ? '已配置' : '未配置',
     });
   } catch (error) {
-    console.error("数据库连接测试失败:", error);
+    console.error('数据库测试失败:', error);
+    
+    let errorMessage = '数据库测试失败';
+    let errorDetails = '';
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorDetails = error.stack || '';
+      
+      // 特殊处理表名冲突错误
+      if (error.message.includes('relation "api" already exists')) {
+        errorMessage = '数据库表名冲突错误';
+        errorDetails = '检测到"api"表已存在，这可能是由Prisma的表命名策略导致的。已添加relationMode="prisma"进行修复。';
+      }
+    }
+    
     return NextResponse.json(
-      { 
+      {
         status: 'error',
-        message: '数据库连接或查询失败',
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        message: errorMessage,
+        details: errorDetails,
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
       },
